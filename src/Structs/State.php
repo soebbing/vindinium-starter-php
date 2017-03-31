@@ -2,8 +2,9 @@
 
 namespace Vindinium\Structs;
 
-use Vindinium\Structs\Game;
-
+/**
+ * Describes the state of the game, the board incl. everything and everyone on it.
+ */
 class State
 {
     /** @var string */
@@ -29,8 +30,6 @@ class State
 
             $state->$key = $value;
         }
-
-        var_dump($json);
 
         return $state;
     }

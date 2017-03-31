@@ -25,6 +25,7 @@ class Position implements PositionableInterface
 
         return $position;
     }
+
     /**
      * @return int
      */

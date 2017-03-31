@@ -99,28 +99,4 @@ class Game
     {
         return $this->board;
     }
-
-    /**
-     * @return string
-     */
-    public function getToken()
-    {
-        return $this->token;
-    }
-
-    /**
-     * @return string
-     */
-    public function getViewUrl()
-    {
-        return $this->viewUrl;
-    }
-
-    /**
-     * @return string
-     */
-    public function getPlayUrl()
-    {
-        return $this->playUrl;
-    }
 }

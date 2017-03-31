@@ -49,7 +49,7 @@ class Hero implements PositionableInterface
         $hero = new Hero();
         foreach ($json as $key => $value) {
             if ('position' === $key) {
-                $hero->$key = ('Vindinium\Structs\\' . $key)::fromJson($value);
+                $hero->$key = 'Vindinium\Structs\\' . $key::fromJson($value);
             }
 
             $hero->$key = $value;

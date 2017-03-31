@@ -32,6 +32,7 @@ class Board
 
         return $board;
     }
+
     /**
      * @return int
      */

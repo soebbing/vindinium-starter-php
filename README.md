@@ -2,7 +2,7 @@
 
 Inspired by [vindinium-starter-python](https://github.com/ornicar/vindinium-starter-python).
 
-Should work with php5.3.* with CLI.
+Should work with php5.6.* with CLI.
 
 ## Libraries deps:
 
