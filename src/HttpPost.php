@@ -1,9 +1,10 @@
 <?php
 
+namespace Vindinium;
+
 class HttpPost
 {
-
-    public static function post($url, $params = array(), $timeout = 30)
+    public static function post($url, $params = [], $timeout = 30)
     {
         if (!function_exists('curl_init')) {
             echo "Curl library is not installed\n";

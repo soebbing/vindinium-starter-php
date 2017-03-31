@@ -1,0 +1,21 @@
+{
+    "name": "vindinium/php",
+    "description": "A Vindinium bot in PHP",
+    "type": "project",
+    "require": {
+        "jmgq/a-star": "@stable"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Hendrik Söbbing",
+            "email": "h.soebbing@shopware.com"
+        }
+    ],
+    "autoload": {
+      "psr-4": {
+        "Vindinium\\": "src/"
+      }
+    },
+    "minimum-stability": "stable"
+}

@@ -1,3 +1,5 @@
 .idea
 ._*
 .DS_Store
+
+/vendor/
