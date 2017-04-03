@@ -7,6 +7,7 @@ use Vindinium\Bot\Random;
 use Vindinium\Structs\Game;
 use Vindinium\BotInterface;
 use Vindinium\Structs\State;
+use Vindinium\Renderer\StateRenderer;
 
 class Client
 {
@@ -44,24 +45,22 @@ class Client
     }
 
     /**
-     * @param null|BotInterface $bot
+     * @param BotInterface $bot
+     * @param StateRenderer $formatter
      */
-    public function run(BotInterface $bot = null)
+    public function run(BotInterface $bot, StateRenderer $formatter)
     {
-        if (!$bot) {
-            $bot = new Random();
-        }
-
         for ($i = 0; $i <= ($this->numberOfGames - 1); $i++) {
-            $this->start($bot);
+            $this->start($bot, $formatter);
             echo PHP_EOL . 'Game finished: '. ($i + 1) . '/' . $this->numberOfGames . PHP_EOL;
         }
     }
 
     /**
      * @param BotInterface $botObject
+     * @param StateRenderer $formatter
      */
-    private function start(BotInterface $botObject)
+    private function start(BotInterface $botObject, StateRenderer $formatter)
     {
         // Starts a game with all the required parameters
         if ($this->mode === 'arena') {
@@ -71,27 +70,15 @@ class Client
         // Get the initial state
         $state = $this->getNewGameState();
 
-        var_dump($state);die;
-        echo "Size: $size\n";
-        for ($i = 0; $i < $size; $i++) {
-            echo substr($tiles, $size*$i*2, $size*2) . PHP_EOL;
-        }
-
-        die;
-        echo 'Playing at: '. $state['viewUrl'] . "\n";
-
-        ob_start();
         while ($this->isFinished($state) === false) {
-            // Some nice output ;)
-            echo '.';
-            ob_flush();
+
+            $formatter->renderState($state);
 
             // Move to some direction
-            $url = $state['playUrl'];
+            $url = $state->getPlayUrl();
             $direction = $botObject->move($state);
             $state = $this->move($url, $direction);
         }
-        ob_end_clean();
     }
 
     private function getNewGameState()
@@ -120,7 +107,7 @@ class Client
     /**
      * @param string $url
      * @param string $direction
-     * @return array|null
+     * @return State|null
      */
     private function move($url, $direction)
     {
@@ -131,19 +118,23 @@ class Client
         try {
             $r = HttpPost::post($url, ['dir' => $direction], self::TIMEOUT);
             if (isset($r['headers']['status_code']) && $r['headers']['status_code'] === 200) {
-                return json_decode($r['content'], true);
+                return State::fromJson(json_decode($r['content'], true));
             }
 
             echo 'Error HTTP '. $r['headers']['status_code'] . "\n" . $r['content'] . "\n";
-            return array('game' => array('finished' => true));
+            return null;
         } catch (\Exception $e) {
             echo $e->getMessage() . PHP_EOL;
-            return array('game' => ['finished' => true]);
+            return null;
         }
     }
 
-    private function isFinished($state)
+    /**
+     * @param State $state
+     * @return bool
+     */
+    private function isFinished(State $state)
     {
-        return $state['game']['finished'];
+        return $state && $state->getGame()->isFinished();
     }
 }

@@ -16,9 +16,6 @@ class Board
     /** @var string */
     private $tiles;
 
-    /** @var bool */
-    private $finished;
-
     /**
      * @param array $json
      * @return Board
@@ -47,13 +44,5 @@ class Board
     public function getTiles()
     {
         return $this->tiles;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isFinished()
-    {
-        return $this->finished;
     }
 }

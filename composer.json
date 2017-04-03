@@ -3,7 +3,9 @@
     "description": "A Vindinium bot in PHP",
     "type": "project",
     "require": {
-        "jmgq/a-star": "@stable"
+        "jmgq/a-star": "@stable",
+        "symfony/console": "^3.2",
+        "pimple/pimple": "^3.0"
     },
     "license": "MIT",
     "authors": [

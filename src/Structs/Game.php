@@ -2,9 +2,7 @@
 
 namespace Vindinium\Structs;
 
-use Vindinium\Structs\Hero;
 use Vindinium\Structs\Board;
-use Vindinium\Structs\Position;
 
 class Game
 {
@@ -26,6 +24,9 @@ class Game
     /** @var Board */
     private $board;
 
+    /** @var bool */
+    private $finished;
+
     /**
      * @param array $json
      * @return Game
@@ -34,19 +35,24 @@ class Game
     {
         $game = new Game();
         foreach ($json as $key => $value) {
-            if ('board' === $key) {
-                $game->$key = 'Vindinium\Structs\\' . ucfirst($key)::fromJson($value);
+            $game->$key = $value;
+
+            if ($key === 'board') {
+                $game->board = Board::fromJson($value);
             }
 
-            if ('heros' === $key) {
+            if ($key === 'hero') {
+                $game->hero = Hero::fromJson($value);
+            }
+
+            if ('heroes' === $key) {
                 $elements = [];
                 foreach ($value as $element) {
-                    $elements = 'Vindinium\Structs\\' . $value::fromJson($element);
+                    $elements[] = Hero::fromJson($element);
                 }
                 $game->$key = $elements;
             }
 
-            $game->$key = $value;
         }
 
         return $game;
@@ -98,5 +104,13 @@ class Game
     public function getBoard()
     {
         return $this->board;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isFinished()
+    {
+        return $this->finished;
     }
 }

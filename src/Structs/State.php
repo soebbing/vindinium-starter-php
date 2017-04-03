@@ -2,6 +2,9 @@
 
 namespace Vindinium\Structs;
 
+use Vindinium\Structs\Game;
+use Vindinium\Structs\Hero;
+
 /**
  * Describes the state of the game, the board incl. everything and everyone on it.
  */
@@ -16,6 +19,12 @@ class State
     /** @var string */
     private $playUrl;
 
+    /** @var Game */
+    private $game;
+
+    /** @var Hero */
+    private $hero;
+
     /**
      * @param array $json
      * @return State
@@ -24,11 +33,14 @@ class State
     {
         $state = new State();
         foreach ($json as $key => $value) {
-            if (in_array($key, ['game', 'hero'], true)) {
-                $state->$key = 'Vindinium\Structs\\' . ucfirst($key)::fromJson($value);
-            }
-
             $state->$key = $value;
+
+            if ($key === 'game') {
+                $state->game = Game::fromJson($value);
+            }
+            if ($key === 'hero') {
+                $state->hero = Hero::fromJson($value);
+            }
         }
 
         return $state;
@@ -58,4 +70,19 @@ class State
         return $this->playUrl;
     }
 
+    /**
+     * @return Game
+     */
+    public function getGame()
+    {
+        return $this->game;
+    }
+
+    /**
+     * @return Hero
+     */
+    public function getHero()
+    {
+        return $this->hero;
+    }
 }
