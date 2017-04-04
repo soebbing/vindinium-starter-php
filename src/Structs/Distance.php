@@ -4,7 +4,7 @@ namespace Vindinium\Structs;
 
 use Vindinium\PositionableInterface;
 
-class Position implements PositionableInterface
+class Distance
 {
     /** @var int */
     private $x;
@@ -12,23 +12,19 @@ class Position implements PositionableInterface
     /** @var int */
     private $y;
 
+    /** @var PositionableInterface */
+    private $target;
+
     /**
      * @param int $x
      * @param int $y
+     * @param PositionableInterface $target
      */
-    public function __construct($x, $y)
+    public function __construct($x, $y, PositionableInterface $target)
     {
         $this->x = $x;
         $this->y = $y;
-    }
-
-    /**
-     * @param array $json
-     * @return Position
-     */
-    public static function fromJson(array $json)
-    {
-        return new Position($json['x'], $json['y']);
+        $this->target = $target;
     }
 
     /**
@@ -48,10 +44,10 @@ class Position implements PositionableInterface
     }
 
     /**
-     * @return Position
+     * @return PositionableInterface
      */
-    public function getPosition()
+    public function getTarget()
     {
-        return $this;
+        return $this->target;
     }
 }

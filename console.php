@@ -9,7 +9,7 @@ $input = new \Symfony\Component\Console\Input\ArgvInput();
 $output = new \Symfony\Component\Console\Output\ConsoleOutput();
 
 $app = new Pimple\Container([
-    'bot' => new \Vindinium\Bot\Random(),
+    'bot' => new \Vindinium\Bot\LordHelmchen(),
     'formatter' => new Vindinium\Renderer\StateRenderer($output)
 ]);
 
