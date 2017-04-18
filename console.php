@@ -8,8 +8,11 @@ ini_set('display_errors', 1);
 $input = new \Symfony\Component\Console\Input\ArgvInput();
 $output = new \Symfony\Component\Console\Output\ConsoleOutput();
 
+$astar = new \Vindinium\Service\Astar(new \Vindinium\Parser\TileParser());
+
 $app = new Pimple\Container([
-    'bot' => new \Vindinium\Bot\LordHelmchen(),
+    'astar' => $astar,
+    'bot' => new \Vindinium\Bot\LordHelmchen($astar, new \Vindinium\Parser\TileParser()),
     'formatter' => new Vindinium\Renderer\StateRenderer($output)
 ]);
 

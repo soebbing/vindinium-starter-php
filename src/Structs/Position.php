@@ -2,6 +2,7 @@
 
 namespace Vindinium\Structs;
 
+use JMGQ\AStar\AbstractNode;
 use Vindinium\PositionableInterface;
 
 class Position implements PositionableInterface
@@ -53,5 +54,13 @@ class Position implements PositionableInterface
     public function getPosition()
     {
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getID()
+    {
+        return $this->getX() . 'x' .  $this->getY();
     }
 }

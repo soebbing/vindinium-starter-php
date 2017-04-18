@@ -4,6 +4,7 @@ namespace Vindinium\Parser;
 
 use Vindinium\Structs\Game;
 use Vindinium\Structs\Position;
+use Vindinium\Structs\Interpreted\Tile;
 use Vindinium\Structs\Interpreted\Tile\Wood;
 use Vindinium\Structs\Interpreted\Tile\Grass;
 use Vindinium\Structs\Interpreted\Tile\Hero;
@@ -12,6 +13,10 @@ use Vindinium\Structs\Interpreted\Tile\Treasure;
 
 class TileParser
 {
+    /**
+     * @param Game $game
+     * @return Tile[]
+     */
     public function parse(Game $game)
     {
         $tiles = $game->getBoard()->getTiles();

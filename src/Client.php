@@ -77,6 +77,7 @@ class Client
             // Move to some direction
             $url = $state->getPlayUrl();
             $direction = $botObject->move($state);
+            $formatter->writeln('Move: ' . $direction);
             $state = $this->move($url, $direction);
         }
     }

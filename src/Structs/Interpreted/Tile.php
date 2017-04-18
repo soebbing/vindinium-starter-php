@@ -2,12 +2,20 @@
 
 namespace Vindinium\Structs\Interpreted;
 
+use JMGQ\AStar\AbstractNode;
 use Vindinium\Structs\Distance;
 use Vindinium\Structs\Position;
 use Vindinium\PositionableInterface;
 
-abstract class Tile implements PositionableInterface
+abstract class Tile extends AbstractNode implements PositionableInterface
 {
+    const HERO = 'Hero';
+    const GRASS = 'Grass';
+    const TAVERN = 'Tavern';
+    const TREASURE = 'Treasure';
+    const SPAWN = 'Spawn';
+    const WOOD = 'Wood';
+
     /** @var Position */
     protected $position;
 
@@ -67,5 +75,33 @@ abstract class Tile implements PositionableInterface
     public function isWalkable()
     {
         return $this->walkable;
+    }
+
+    /**
+     * @return string
+     */
+    public function getType()
+    {
+        $elements = explode('\\', get_class($this));
+        return array_pop($elements);
+    }
+
+    /**
+     * Obtains the node's unique ID
+     * @return string
+     */
+    public function getID()
+    {
+        return $this->position->getID();
+    }
+
+    public function getX()
+    {
+        return $this->position->getX();
+    }
+
+    public function getY()
+    {
+        return $this->position->getY();
     }
 }

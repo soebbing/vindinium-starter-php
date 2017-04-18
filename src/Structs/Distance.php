@@ -2,9 +2,10 @@
 
 namespace Vindinium\Structs;
 
+use JMGQ\AStar\AbstractNode;
 use Vindinium\PositionableInterface;
 
-class Distance
+class Distance extends AbstractNode
 {
     /** @var int */
     private $x;
