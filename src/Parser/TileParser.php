@@ -44,7 +44,8 @@ class TileParser
                         }
 
                         $number = $tiles[(($row * $size * 2) + $tile) + 1];
-                        $tileStructs[] = new Treasure(new Position($row, $tile/2), $game->getHeroes()[$number-1]);
+                        $hero = $game->getHeroes()[$number-1];
+                        $tileStructs[] = new Treasure(new Position($row, $tile/2), $hero);
                         break;
 
                     case $tiles[($row * $size * 2) + $tile] === '@':

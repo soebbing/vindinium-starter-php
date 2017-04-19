@@ -4,8 +4,9 @@ namespace Vindinium\Service;
 
 use JMGQ\AStar\Node;
 use Vindinium\Parser\TileParser;
+use Vindinium\Structs\Game;
 use Vindinium\Structs\Board;
-use Vindinium\Structs\Game;;
+use Vindinium\Structs\Position;
 use Vindinium\Structs\Interpreted\Tile;
 use Vindinium\Structs\Interpreted\Tile\Grass;
 use Vindinium\Structs\Interpreted\Tile\Hero;
@@ -13,7 +14,6 @@ use Vindinium\Structs\Interpreted\Tile\Spawn;
 use Vindinium\Structs\Interpreted\Tile\Tavern;
 use Vindinium\Structs\Interpreted\Tile\Treasure;
 use Vindinium\Structs\Interpreted\Tile\Wood;
-use Vindinium\Structs\Position;
 
 class Astar extends \JMGQ\AStar\AStar
 {
@@ -92,21 +92,25 @@ class Astar extends \JMGQ\AStar\AStar
     public function calculateEstimatedCost(Node $start, Node $end)
     {
         $utility = $this->manhattanDistance($start, $end);
-        $startTile = $this->findTileForNode($start, $this->tiles);
         $endTile = $this->findTileForNode($end, $this->tiles);
 
-        if (!$endTile->isWalkable() || ($endTile->getType() === Tile::TREASURE && $endTile->getOwner() == $this->game->getHero()) ||
-            ($endTile->getType() === Tile::WOOD) || ($endTile->getType() === Tile::TAVERN)) {
+        if (!$endTile->isWalkable() ||
+            ($endTile->getType() === Tile::TREASURE && $endTile->getOwner() && $endTile->getOwner()->getName() === $this->game->getHero()->getName()) ||
+            ($endTile->getType() === Tile::WOOD)) {
             return 10 * $utility;
         }
 
         if ($endTile->getType() === Tile::HERO && $endTile->getOwner() !== $this->game->getHero()) {
+            /** @var \Vindinium\Structs\Hero[] $hero */
+            $heros = $this->game->getHeroes();
+
             /** @var \Vindinium\Structs\Hero $hero */
-            $hero = $this->game->getHeroes();
-            if ($hero->getLife() - $this->game->getHero()->getLife() < 10) {
-                $utility -= 1 / $utility;
-            } else {
-                $utility += 1 / $utility;
+            foreach ($heros as $hero) {
+                if ($hero->getLife() - $this->game->getHero()->getLife() < 10) {
+                    $utility -= 1 / $utility;
+                } else {
+                    $utility += 1 / $utility;
+                }
             }
         }
 
@@ -119,7 +123,6 @@ class Astar extends \JMGQ\AStar\AStar
 
         return $utility;
     }
-
 
     /**
      * @param Position $a
@@ -162,7 +165,7 @@ class Astar extends \JMGQ\AStar\AStar
     {
         $dx = abs($start->getX() - $end->getX());
         $dy = abs($start->getY() - $end->getY());
-        return ($dx+$dy);
+        return ($dx + $dy);
     }
 
     /**

@@ -63,4 +63,12 @@ class Position implements PositionableInterface
     {
         return $this->getX() . 'x' .  $this->getY();
     }
+
+    /**
+     * @return string
+     */
+    public function __toString()
+    {
+        return "{$this->getX()}x{$this->getY()}";
+    }
 }

@@ -134,7 +134,7 @@ class Client
      * @param State $state
      * @return bool
      */
-    private function isFinished(State $state)
+    private function isFinished(?State $state)
     {
         return $state && $state->getGame()->isFinished();
     }

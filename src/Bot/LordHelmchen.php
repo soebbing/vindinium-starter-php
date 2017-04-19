@@ -42,7 +42,7 @@ class LordHelmchen implements BotInterface
         $tiles = $this->tileParser->parse($state->getGame());
 
         $targetNode = $this->findTargetNode($state, $tiles);
-var_dump($targetNode);
+        echo "Targetnode: {$targetNode}\n";
         $direction = $this->getDirectionToNode($state->getHero()->getPosition(), $targetNode, $tiles);
 
         return $direction;
@@ -59,10 +59,10 @@ var_dump($targetNode);
 
         $distances = [];
 
-        $targetTiles = array_slice($targetTiles,0,5);
-
         foreach ($targetTiles as $tile) {
+            $start = microtime(true);
             $steps = $this->astar->run($this->getTileForPosition($state->getHero()->getPosition(), $tiles), $tile);
+            echo "Dauer: " . (microtime(true) - $start) . " {$tile}\n";
             $distances[] = [
                 count($steps),
                 $tile,
@@ -87,7 +87,7 @@ var_dump($targetNode);
     private function buildLinkList(State $state, array $tiles)
     {
         $otherHeros = $this->getHeros($state->getHero(), $state->getGame()->getHeroes(), $tiles);
-        $treasures = $this->getTreasures($state->getHero(), $tiles);
+        $treasures = array_slice($this->getTreasures($state->getHero(), $tiles), 0,1);
         $taverns = $this->getTaverns($tiles);
 
         return array_merge($otherHeros, $treasures, $taverns);
@@ -105,7 +105,6 @@ var_dump($targetNode);
         foreach ($tiles as $tile) {
             if ($tile->getType() === Tile::TREASURE &&
                 (!$tile->getOwner() || ($tile->getOwner()->getName() !== $hero->getName()))) {
-                var_dump($tile->getOwner());
                 $treasures[] = $tile;
             }
         }
@@ -202,6 +201,6 @@ var_dump($targetNode);
             }
         }
 
-        throw new \OutOfBoundsException('Tile for Position ' . $position->getID() . ' obnt found');
+        throw new \OutOfBoundsException('Tile for Position ' . $position->getID() . ' not found');
     }
 }
