@@ -2,8 +2,8 @@
 
 namespace Vindinium\Structs\Interpreted\Tile;
 
+use Vindinium\Structs\Hero;
 use Vindinium\Structs\Position;
-use Vindinium\Structs\Hero as HeroStruct;
 use Vindinium\Structs\Interpreted\Tile;
 
 class Treasure extends Tile
@@ -13,11 +13,11 @@ class Treasure extends Tile
 
     /**
      * @param Position $position
-     * @param HeroStruct $owner
+     * @param Hero $owner
      */
-    public function __construct(Position $position, HeroStruct $owner = null)
+    public function __construct(Position $position, Hero $owner = null)
     {
-        $this->walkable = true;
+        $this->walkable = false;
         $this->owner = $owner;
         parent::__construct($position);
     }

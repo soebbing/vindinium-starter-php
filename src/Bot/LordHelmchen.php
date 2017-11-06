@@ -33,24 +33,31 @@ class LordHelmchen implements BotInterface
 
     /**
      * @param State $state
+     *
+     * @throws \OutOfBoundsException
+     *
      * @return mixed
      */
     public function move(State $state)
     {
-        $this->astar->setGame($state->getGame());
-
-        $tiles = $this->tileParser->parse($state->getGame());
+        $this->astar->setState($state);
+        $tiles = $this->tileParser->parse($state);
 
         $targetNode = $this->findTargetNode($state, $tiles);
-        echo "Targetnode: {$targetNode}\n";
+        #echo "Targetnode: {$targetNode}\n";
         $direction = $this->getDirectionToNode($state->getHero()->getPosition(), $targetNode, $tiles);
 
         return $direction;
     }
 
     /**
+     * Core logic that decides what is the next move.
+     *
      * @param State $state
      * @param Tile[] $tiles
+     *
+     * @throws \OutOfBoundsException
+     *
      * @return Tile
      */
     private function findTargetNode(State $state, array $tiles)
@@ -60,21 +67,61 @@ class LordHelmchen implements BotInterface
         $distances = [];
 
         foreach ($targetTiles as $tile) {
-            $start = microtime(true);
+            # If a gold mine belongs to us, we don't need to go there
+            #echo $tile->getType() . "\n";
+            if ($tile->getType() === Tile::TREASURE &&
+                $tile->getOwner()) {
+                #echo "Unsere Goldmine - UNINTERESSANT!\n";
+
+                continue;
+            }
+
             $steps = $this->astar->run($this->getTileForPosition($state->getHero()->getPosition(), $tiles), $tile);
-            echo "Dauer: " . (microtime(true) - $start) . " {$tile}\n";
+
             $distances[] = [
-                count($steps),
-                $tile,
-                $steps
+                'weight' => count($steps), # lower is better
+                'tile' => $tile,
+                'steps' => $steps,
             ];
         }
 
+        foreach ($distances as $distance) {
+            # If another Hero is stronger than us, we don't want to meet him
+            if ($distance['tile'] === Tile::HERO &&
+                $state->getHero()->getLife() < $distance['tile']->getLife()) {
+                $distance['weight'] -= 1000;
+            }
+
+            # If a gold mine belongs to us, we don't need to go there
+            if ($distance['tile'] === Tile::TREASURE &&
+                $state->getHero() === $distance['tile']->getOwner()) {
+                $distance['weight'] -= 1000;
+            }
+
+            # If a gold mine does NOT belong to us, we want to go there
+            if ($distance['tile'] === Tile::TREASURE &&
+                $state->getHero()->getLife() !== $distance['tile']->getOwner()) {
+                $distance['weight'] += 50;
+            }
+
+            # If we have enough life, we don't want to go to a tavern
+            if ($distance['tile'] === Tile::TAVERN &&
+                $state->getHero()->getLife() > 20) {
+                $distance['weight'] -= 100;
+            }
+
+            # If we DONT have enough life, we don't want to go to a tavern
+            if ($distance['tile'] === Tile::TAVERN &&
+                $state->getHero()->getLife() < 20) {
+                $distance['weight'] += 500;
+            }
+        }
+
         usort($distances, function($a, $b) {
-            return $a[0] < $b[0] ? 1 : -1;
+            return $a['weight'] < $b['weight'] ? 1 : -1;
         });
 
-        return array_pop($distances)[1];
+        return array_pop($distances)['tile'];
     }
 
     /**
@@ -87,8 +134,10 @@ class LordHelmchen implements BotInterface
     private function buildLinkList(State $state, array $tiles)
     {
         $otherHeros = $this->getHeros($state->getHero(), $state->getGame()->getHeroes(), $tiles);
-        $treasures = array_slice($this->getTreasures($state->getHero(), $tiles), 0,1);
+        $treasures = $this->getTreasures($state->getHero(), $tiles);
         $taverns = $this->getTaverns($tiles);
+
+        $taverns = [];
 
         return array_merge($otherHeros, $treasures, $taverns);
     }
@@ -133,6 +182,7 @@ class LordHelmchen implements BotInterface
      * @param Hero $lordHelmchen
      * @param Hero[] $allHeros
      * @param Tile[] $tiles
+     *
      * @return Tile[]
      */
     private function getHeros(Hero $lordHelmchen, array $allHeros, array $tiles)
@@ -157,6 +207,9 @@ class LordHelmchen implements BotInterface
      * @param Position $currentNode
      * @param Node|Tile $targetNode
      * @param Tile[] $tiles
+     *
+     * @throws \OutOfBoundsException
+     *
      * @return string
      */
     private function getDirectionToNode(Position $currentNode, Tile $targetNode, array $tiles)
@@ -191,6 +244,9 @@ class LordHelmchen implements BotInterface
      *
      * @param Position $position
      * @param Tile[] $tiles
+     *
+     * @throws \OutOfBoundsException
+     *
      * @return Tile
      */
     private function getTileForPosition(Position $position, array $tiles)

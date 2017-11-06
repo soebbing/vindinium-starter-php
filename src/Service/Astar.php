@@ -4,21 +4,16 @@ namespace Vindinium\Service;
 
 use JMGQ\AStar\Node;
 use Vindinium\Parser\TileParser;
-use Vindinium\Structs\Game;
-use Vindinium\Structs\Board;
+use Vindinium\Structs\State;
 use Vindinium\Structs\Position;
 use Vindinium\Structs\Interpreted\Tile;
 use Vindinium\Structs\Interpreted\Tile\Grass;
-use Vindinium\Structs\Interpreted\Tile\Hero;
 use Vindinium\Structs\Interpreted\Tile\Spawn;
-use Vindinium\Structs\Interpreted\Tile\Tavern;
-use Vindinium\Structs\Interpreted\Tile\Treasure;
-use Vindinium\Structs\Interpreted\Tile\Wood;
 
 class Astar extends \JMGQ\AStar\AStar
 {
-    /** @var Game */
-    private $game;
+    /** @var State */
+    private $state;
 
     /** @var TileParser */
     private $tileParser;
@@ -35,17 +30,20 @@ class Astar extends \JMGQ\AStar\AStar
     }
 
     /**
-     * @param Game $game
+     * @param State $state
      */
-    public function setGame(Game $game)
+    public function setState(State $state)
     {
-        $this->game = $game;
+        $this->state = $state;
 
-        $this->tiles = $this->tileParser->parse($game);
+        $this->tiles = $this->tileParser->parse($state);
     }
 
     /**
      * @param Node $node
+     *
+     * @throws \OutOfBoundsException
+     *
      * @return Node[]
      */
     public function generateAdjacentNodes(Node $node)
@@ -87,6 +85,9 @@ class Astar extends \JMGQ\AStar\AStar
     /**
      * @param Node $start
      * @param Node $end
+     *
+     * @throws \OutOfBoundsException
+     *
      * @return integer | float
      */
     public function calculateEstimatedCost(Node $start, Node $end)
@@ -94,23 +95,20 @@ class Astar extends \JMGQ\AStar\AStar
         $utility = $this->manhattanDistance($start, $end);
         $endTile = $this->findTileForNode($end, $this->tiles);
 
-        if (!$endTile->isWalkable() ||
-            ($endTile->getType() === Tile::TREASURE && $endTile->getOwner() && $endTile->getOwner()->getName() === $this->game->getHero()->getName()) ||
-            ($endTile->getType() === Tile::WOOD)) {
+        if (!$endTile->isWalkable()) {
+            return $utility * 100;
+        }
+
+        if (($endTile->getType() === Tile::WOOD) ||
+            ($endTile->getType() === Tile::TREASURE && $endTile->getOwner() && $endTile->getOwner()->getName() === $this->game->getHero()->getName())) {
             return 10 * $utility;
         }
 
         if ($endTile->getType() === Tile::HERO && $endTile->getOwner() !== $this->game->getHero()) {
-            /** @var \Vindinium\Structs\Hero[] $hero */
-            $heros = $this->game->getHeroes();
-
-            /** @var \Vindinium\Structs\Hero $hero */
-            foreach ($heros as $hero) {
-                if ($hero->getLife() - $this->game->getHero()->getLife() < 10) {
-                    $utility -= 1 / $utility;
-                } else {
-                    $utility += 1 / $utility;
-                }
+            if (($endTile->getOwner()->getLife() - $this->game->getHero()->getLife()) < 10) {
+                $utility -= 1 / $utility;
+            } else {
+                $utility += 1 / $utility;
             }
         }
 
@@ -125,8 +123,8 @@ class Astar extends \JMGQ\AStar\AStar
     }
 
     /**
-     * @param Position $a
-     * @param Position $b
+     * @param Node|Position $a
+     * @param Node|Position $b
      * @return bool
      */
     private function areAdjacent(Node $a, Node $b)
@@ -138,8 +136,10 @@ class Astar extends \JMGQ\AStar\AStar
     /**
      * @param Node $node
      * @param Tile[] $tiles
-     * @return Tile
+     *
      * @throws \OutOfBoundsException
+     *
+     * @return Tile
      */
     private function findTileForNode(Node $node, array $tiles)
     {
