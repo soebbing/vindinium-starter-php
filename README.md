@@ -2,20 +2,20 @@
 
 Inspired by [vindinium-starter-python](https://github.com/ornicar/vindinium-starter-python).
 
-Should work with php5.6.* with CLI.
+Updated version of [vindinium-starter-php](https://github.com/kcampion/vindinium-starter-php)
 
 ## Libraries deps:
 
-    php5-cli
+    php-cli
     cURL
-    php5-curl
+    php-curl
 
 ## Run with:
 
-    php starter.php <key> <[training|arena]> <number-of-games-to-play> [server-url]
+    php console.php <key> <[training|arena]> <number-of-games-to-play> [server-url]
 
 ## Examples:
 
-	php starter.php mySecretKey training 30
-    php starter.php mySecretKey arena 1
+	php console.php mySecretKey training 30
+    php console.php mySecretKey arena 1
     
