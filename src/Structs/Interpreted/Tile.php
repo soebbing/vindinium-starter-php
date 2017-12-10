@@ -4,6 +4,7 @@ namespace Vindinium\Structs\Interpreted;
 
 use JMGQ\AStar\AbstractNode;
 use Vindinium\Structs\Distance;
+use Vindinium\Structs\Hero;
 use Vindinium\Structs\Position;
 use Vindinium\PositionableInterface;
 
@@ -20,7 +21,7 @@ abstract class Tile extends AbstractNode implements PositionableInterface
     protected $position;
 
     /** @var bool */
-    protected $walkable;
+    protected $walkable = false;
 
     /**
      * @param Position $position
@@ -70,9 +71,10 @@ abstract class Tile extends AbstractNode implements PositionableInterface
     }
 
     /**
+     * @param Hero|null $hero
      * @return bool
      */
-    public function isWalkable()
+    public function isWalkable(Hero $hero = null)
     {
         return $this->walkable;
     }

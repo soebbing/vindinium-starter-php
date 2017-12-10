@@ -7,11 +7,10 @@ use Vindinium\BotInterface;
 use Vindinium\Parser\TileParser;
 use Vindinium\Service\Astar;
 use Vindinium\Structs\Board;
-use Vindinium\Structs\Game;
 use Vindinium\Structs\Hero;
-use Vindinium\Structs\Interpreted\Tile;
-use Vindinium\Structs\Position;
 use Vindinium\Structs\State;
+use Vindinium\Structs\Position;
+use Vindinium\Structs\Interpreted\Tile;
 
 class LordHelmchen implements BotInterface
 {
@@ -20,6 +19,9 @@ class LordHelmchen implements BotInterface
 
     /** @var TileParser */
     private $tileParser;
+
+    /** @var string */
+    private $lastDirection;
 
     /**
      * @param Astar $astar
@@ -44,10 +46,10 @@ class LordHelmchen implements BotInterface
         $tiles = $this->tileParser->parse($state);
 
         $targetNode = $this->findTargetNode($state, $tiles);
-        #echo "Targetnode: {$targetNode}\n";
-        $direction = $this->getDirectionToNode($state->getHero()->getPosition(), $targetNode, $tiles);
 
-        return $direction;
+        $this->lastDirection = $this->getDirectionToNode($state->getHero(), $targetNode, $tiles);
+
+        return $this->lastDirection;
     }
 
     /**
@@ -68,16 +70,13 @@ class LordHelmchen implements BotInterface
 
         foreach ($targetTiles as $tile) {
             # If a gold mine belongs to us, we don't need to go there
-            #echo $tile->getType() . "\n";
             if ($tile->getType() === Tile::TREASURE &&
                 $tile->getOwner()) {
-                #echo "Unsere Goldmine - UNINTERESSANT!\n";
 
                 continue;
             }
 
             $steps = $this->astar->run($this->getTileForPosition($state->getHero()->getPosition(), $tiles), $tile);
-
             $distances[] = [
                 'weight' => count($steps), # lower is better
                 'tile' => $tile,
@@ -85,35 +84,40 @@ class LordHelmchen implements BotInterface
             ];
         }
 
-        foreach ($distances as $distance) {
+        foreach ($distances as &$distance) {
+            /** @var Tile $tile */
+            $tile = $distance['tile'];
+
             # If another Hero is stronger than us, we don't want to meet him
-            if ($distance['tile'] === Tile::HERO &&
-                $state->getHero()->getLife() < $distance['tile']->getLife()) {
-                $distance['weight'] -= 1000;
+            if ($tile->getType() === Tile::HERO &&
+                $state->getHero()->getLife() <
+                $tile->getHero()->getLife()) {
+                $distance['weight'] += 1000;
             }
 
             # If a gold mine belongs to us, we don't need to go there
-            if ($distance['tile'] === Tile::TREASURE &&
-                $state->getHero() === $distance['tile']->getOwner()) {
-                $distance['weight'] -= 1000;
+            if ($tile->getType() === Tile::TREASURE &&
+                ($tile->getOwner() && $state->getHero()->getName() === $tile->getOwner()->getName())) {
+                $distance['weight'] += 1000;
             }
 
             # If a gold mine does NOT belong to us, we want to go there
-            if ($distance['tile'] === Tile::TREASURE &&
-                $state->getHero()->getLife() !== $distance['tile']->getOwner()) {
-                $distance['weight'] += 50;
+            if ($tile->getType() === Tile::TREASURE &&
+                (!$tile->getOwner() ||
+                $state->getHero()->getName() !== $tile->getOwner()->getName())) {
+                $distance['weight'] -= 50;
             }
 
             # If we have enough life, we don't want to go to a tavern
-            if ($distance['tile'] === Tile::TAVERN &&
+            if ($tile->getType() === Tile::TAVERN &&
                 $state->getHero()->getLife() > 20) {
-                $distance['weight'] -= 100;
+                $distance['weight'] += 100;
             }
 
             # If we DONT have enough life, we don't want to go to a tavern
-            if ($distance['tile'] === Tile::TAVERN &&
+            if ($tile->getType() === Tile::TAVERN &&
                 $state->getHero()->getLife() < 20) {
-                $distance['weight'] += 500;
+                $distance['weight'] -= 500;
             }
         }
 
@@ -121,7 +125,12 @@ class LordHelmchen implements BotInterface
             return $a['weight'] < $b['weight'] ? 1 : -1;
         });
 
-        return array_pop($distances)['tile'];
+        $target = array_pop($distances);
+        /** @var Tile $tile */
+        $tile =  $target['tile'];
+
+        #echo "Gehe zu " .  $tile->getType() . " in " . $tile->getPosition() . " weil " . $target['weight'] . "\n";
+        return $tile;
     }
 
     /**
@@ -136,8 +145,6 @@ class LordHelmchen implements BotInterface
         $otherHeros = $this->getHeros($state->getHero(), $state->getGame()->getHeroes(), $tiles);
         $treasures = $this->getTreasures($state->getHero(), $tiles);
         $taverns = $this->getTaverns($tiles);
-
-        $taverns = [];
 
         return array_merge($otherHeros, $treasures, $taverns);
     }
@@ -204,7 +211,7 @@ class LordHelmchen implements BotInterface
     /**
      * Get the direction for a given target node.
      *
-     * @param Position $currentNode
+     * @param Hero $hero
      * @param Node|Tile $targetNode
      * @param Tile[] $tiles
      *
@@ -212,28 +219,49 @@ class LordHelmchen implements BotInterface
      *
      * @return string
      */
-    private function getDirectionToNode(Position $currentNode, Tile $targetNode, array $tiles)
+    private function getDirectionToNode(Hero $hero, Tile $targetNode, array $tiles)
     {
+        $currentNode = $hero->getPosition();
         $direction = Board::Stay;
 
-        if ($currentNode->getX() > $targetNode->getX() &&
-            $this->getTileForPosition(new Position($currentNode->getX() - 1, $currentNode->getY()), $tiles)->isWalkable()) {
-            $direction = Board::North;
+        $northTile = null;
+        $southTile = null;
+        $westTile = null;
+        $eastTile = null;
+
+        if ($currentNode->getX() > $targetNode->getX()) {
+            $northTile = $this->getTileForPosition(new Position($currentNode->getX() - 1, $currentNode->getY()), $tiles);
+            if ($northTile->isWalkable($hero)) {
+                $direction = Board::North;
+            }
         }
 
-        if ($currentNode->getX() < $targetNode->getX() &&
-            $this->getTileForPosition(new Position($currentNode->getX() + 1, $currentNode->getY()), $tiles)->isWalkable()) {
-            $direction = Board::South;
+        if ($currentNode->getX() < $targetNode->getX()) {
+            $southTile = $this->getTileForPosition(new Position($currentNode->getX() + 1, $currentNode->getY()), $tiles);
+
+            if ($southTile->isWalkable($hero)) {
+                $direction = Board::South;
+            }
         }
 
-        if ($currentNode->getY() > $targetNode->getY() &&
-            $this->getTileForPosition(new Position($currentNode->getX(), $currentNode->getY() - 1), $tiles)->isWalkable()) {
-            $direction = Board::West;
+        if ($currentNode->getY() > $targetNode->getY()) {
+            $westTile = $this->getTileForPosition(new Position($currentNode->getX(), $currentNode->getY() - 1), $tiles);
+
+            if ($westTile->isWalkable($hero)) {
+                $direction = Board::West;
+            }
         }
 
-        if ($currentNode->getY() < $targetNode->getY() &&
-            $this->getTileForPosition(new Position($currentNode->getX(), $currentNode->getY() + 1), $tiles)->isWalkable()) {
-            $direction = Board::East;
+        if ($currentNode->getY() < $targetNode->getY()) {
+            $eastTile = $this->getTileForPosition(new Position($currentNode->getX(), $currentNode->getY() + 1), $tiles);
+
+            if ($eastTile->isWalkable($hero)) {
+                $direction = Board::East;
+            }
+        }
+
+        if ($direction === Board::Stay) {
+            $direction = $this->getFallbackDirection($currentNode, $hero, $tiles);
         }
 
         return $direction;
@@ -258,5 +286,59 @@ class LordHelmchen implements BotInterface
         }
 
         throw new \OutOfBoundsException('Tile for Position ' . $position->getID() . ' not found');
+    }
+
+    /**
+     * @param Position $currentPosition
+     * @param Hero $hero
+     * @param Tile[] $tiles
+     *
+     * @return string
+     */
+    private function getFallbackDirection(Position $currentPosition, Hero $hero, array $tiles)
+    {
+        $direction = Board::Stay;
+
+        /** @var Tile $tile */
+        foreach ($tiles as $tile) {
+            // South
+            if ($tile->getPosition()->getX() === ($currentPosition->getX() - 1) &&
+                $tile->isWalkable($hero) && in_array(
+                    $this->lastDirection,
+                    [Board::East, Board::West],
+                    true
+                )) {
+                $direction = Board::South;
+            }
+            // North
+            if ($tile->getPosition()->getX() === ($currentPosition->getX() + 1) &&
+                $tile->isWalkable($hero) && in_array(
+                    $this->lastDirection,
+                    [Board::West, Board::East],
+                    true
+                )) {
+                $direction = Board::North;
+            }
+            // West
+            if ($tile->getPosition()->getY() === ($currentPosition->getY() - 1) &&
+                $tile->isWalkable($hero) && in_array(
+                    $this->lastDirection,
+                    [Board::North, Board::South],
+                    true
+                )) {
+                $direction = Board::West;
+            }
+            // East
+            if ($tile->getPosition()->getY() === ($currentPosition->getY() + 1) &&
+                $tile->isWalkable($hero) && in_array(
+                    $this->lastDirection,
+                    [Board::South, Board::North],
+                    true
+                )) {
+                $direction = Board::East;
+            }
+        }
+
+        return $direction;
     }
 }

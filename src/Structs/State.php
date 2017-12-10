@@ -28,6 +28,7 @@ class State
     /**
      * @param array $json
      * @return State
+     * @throws \RuntimeException
      */
     public static function fromJson(array $json)
     {
@@ -41,6 +42,14 @@ class State
             if ($key === 'hero') {
                 $state->hero = Hero::fromJson($value);
             }
+        }
+
+        if (null === $state->getGame()) {
+            throw new \RuntimeException('State has no game');
+        }
+
+        if (null === $state->getHero()) {
+            throw new \RuntimeException('State has no hero');
         }
 
         return $state;

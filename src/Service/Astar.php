@@ -99,13 +99,19 @@ class Astar extends \JMGQ\AStar\AStar
             return $utility * 100;
         }
 
-        if (($endTile->getType() === Tile::WOOD) ||
-            ($endTile->getType() === Tile::TREASURE && $endTile->getOwner() && $endTile->getOwner()->getName() === $this->game->getHero()->getName())) {
-            return 10 * $utility;
+        if ($utility === 0) {
+            $utility = 0.1;
         }
 
-        if ($endTile->getType() === Tile::HERO && $endTile->getOwner() !== $this->game->getHero()) {
-            if (($endTile->getOwner()->getLife() - $this->game->getHero()->getLife()) < 10) {
+        if (($endTile->getType() === Tile::WOOD) ||
+            ($endTile->getType() === Tile::TREASURE &&
+            $endTile->getOwner() &&
+                $endTile->getOwner() === $this->state->getHero())) {
+            return 100 * $utility;
+        }
+
+        if ($endTile->getType() === Tile::HERO && $endTile->getHero() !== $this->state->getHero()) {
+            if (($endTile->getHero()->getLife() - $this->state->getHero()->getLife()) < 10) {
                 $utility -= 1 / $utility;
             } else {
                 $utility += 1 / $utility;
@@ -113,11 +119,13 @@ class Astar extends \JMGQ\AStar\AStar
         }
 
         $adjTiles = $this->getAdjacentTiles($endTile);
-        foreach ($adjTiles as $tile)
+        foreach ($adjTiles as &$tile) {
             if ($tile->getType() === Tile::TAVERN) {
                 $utility -= 1 / ($utility + 1);
                 break;
             }
+        }
+
 
         return $utility;
     }
@@ -177,11 +185,11 @@ class Astar extends \JMGQ\AStar\AStar
         $adjacent = [];
 
         /** @var Tile $tile */
-        foreach ($this->tiles as $tile) {
+        foreach ($this->tiles as &$tile) {
             if ($tile->getPosition()->getX() === ($endTile->getPosition()->getX() - 1) ||
                 $tile->getPosition()->getX() === ($endTile->getPosition()->getX() + 1) ||
                 $tile->getPosition()->getY() === ($endTile->getPosition()->getY() - 1) ||
-                $tile->getPosition()->getY() === ($endTile->getPosition()->getY() - 1)) {
+                $tile->getPosition()->getY() === ($endTile->getPosition()->getY() + 1)) {
                 $adjacent[] = $tile;
             }
         }

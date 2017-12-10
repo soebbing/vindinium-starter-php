@@ -15,9 +15,6 @@ class Game
     /** @var int */
     private $maxTurns;
 
-    /** @var Hero */
-    private $hero;
-
     /** @var Hero[] */
     private $heroes;
 
@@ -30,6 +27,7 @@ class Game
     /**
      * @param array $json
      * @return Game
+     * @throws \RuntimeException
      */
     public static function fromJson(array $json)
     {
@@ -41,10 +39,6 @@ class Game
                 $game->board = Board::fromJson($value);
             }
 
-            if ($key === 'hero') {
-                $game->hero = Hero::fromJson($value);
-            }
-
             if ('heroes' === $key) {
                 $elements = [];
                 foreach ($value as $element) {
@@ -53,6 +47,14 @@ class Game
                 $game->$key = $elements;
             }
 
+        }
+
+        if (null === $game->getBoard()) {
+            throw new \RuntimeException('Game has no board');
+        }
+
+        if (null === $game->getHeroes()) {
+            throw new \RuntimeException('Game has no heroes');
         }
 
         return $game;
@@ -80,14 +82,6 @@ class Game
     public function getMaxTurns()
     {
         return $this->maxTurns;
-    }
-
-    /**
-     * @return Hero
-     */
-    public function getHero()
-    {
-        return $this->hero;
     }
 
     /**

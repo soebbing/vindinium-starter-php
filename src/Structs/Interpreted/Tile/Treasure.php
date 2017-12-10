@@ -17,7 +17,7 @@ class Treasure extends Tile
      */
     public function __construct(Position $position, Hero $owner = null)
     {
-        $this->walkable = false;
+        $this->walkable = true;
         $this->owner = $owner;
         parent::__construct($position);
     }
@@ -28,5 +28,18 @@ class Treasure extends Tile
     public function getOwner()
     {
         return $this->owner;
+    }
+
+    /**
+     * @param Hero|null $hero
+     * @return bool
+     */
+    public function isWalkable(Hero $hero = null)
+    {
+        if (!$hero || !$this->owner) {
+            return $this->walkable;
+        }
+
+        return $this->owner && $this->owner->getName() !== $hero->getName();
     }
 }

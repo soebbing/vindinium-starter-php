@@ -13,9 +13,9 @@ class Hero extends Tile
 
     /**
      * @param Position $position
-     * @param HeroStruct|null $hero
+     * @param HeroStruct $hero
      */
-    public function __construct(Position $position, HeroStruct $hero = null)
+    public function __construct(Position $position, HeroStruct $hero)
     {
         $this->walkable = false;
         $this->hero = $hero;
