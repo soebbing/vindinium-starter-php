@@ -23,6 +23,17 @@ class LordHelmchen implements BotInterface
     /** @var string */
     private $lastDirection;
 
+    /** @var array */
+    private $route;
+
+    /**
+     * @return array
+     */
+    public function getRoute(): array
+    {
+        return $this->route;
+    }
+
     /**
      * @param Astar $astar
      * @param TileParser $tileParser
@@ -45,9 +56,10 @@ class LordHelmchen implements BotInterface
         $this->astar->setState($state);
         $tiles = $this->tileParser->parse($state);
 
-        $targetNode = $this->findTargetNode($state, $tiles);
+        $this->route = $this->findRoute($state, $tiles);
 
-        $this->lastDirection = $this->getDirectionToNode($state->getHero(), $targetNode);
+        $this->lastDirection = $this->getDirection($state->getHero(), $this->route);
+        $state->setRoute($this->route);
 
         return $this->lastDirection;
     }
@@ -60,9 +72,9 @@ class LordHelmchen implements BotInterface
      *
      * @throws \OutOfBoundsException
      *
-     * @return Tile
+     * @return Tile[]
      */
-    private function findTargetNode(State $state, array $tiles): Tile
+    private function findRoute(State $state, array $tiles): array
     {
         $targetTiles = $this->buildTargetList($state, $tiles);
 
@@ -127,13 +139,8 @@ class LordHelmchen implements BotInterface
 
         $target = array_shift($targets);
 
-        /** @var Tile $tile */
-        $tile =  $target['tile'];
-        echo "Gehe zu " .  $tile->getType() . " in " . $tile->getPosition() . " weil " . $target['weight'] . "\n";
 
-        $steps = $target['steps'];
-        array_shift($steps); // The first element is the starting position, we remove it.
-        return array_shift($steps);
+        return $target['steps'];
     }
 
     /**
@@ -215,14 +222,14 @@ class LordHelmchen implements BotInterface
      * Get the direction for a given target node.
      *
      * @param Hero $hero
-     * @param Node|Tile $targetNode
-     *
-     * @throws \OutOfBoundsException
-     *
+     * @param array $steps
      * @return string
      */
-    private function getDirectionToNode(Hero $hero, Tile $targetNode): string
+    private function getDirection(Hero $hero, array $steps): string
     {
+        array_shift($steps); // The first element is the starting position, we remove it.
+        $targetNode = array_shift($steps);
+
         $currentNode = $hero->getPosition();
         if ($currentNode->getX() > $targetNode->getX()) {
             return Board::North;

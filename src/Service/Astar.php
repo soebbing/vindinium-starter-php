@@ -4,7 +4,6 @@ namespace Vindinium\Service;
 
 use JMGQ\AStar\Node;
 use Vindinium\Parser\TileParser;
-use Vindinium\Structs\Interpreted\Tile\Treasure;
 use Vindinium\Structs\State;
 use Vindinium\Structs\Position;
 use Vindinium\Structs\Interpreted\Tile;
@@ -55,6 +54,7 @@ class Astar extends \JMGQ\AStar\AStar
 
         foreach ($this->tiles as $tile) {
             if ($this->areAdjacent($nodeTile, $tile)) {
+                #echo $nodeTile->getID() . ' && ' . $tile->getID() . " are adajecent\n";
                 $adjacent[] = $tile;
             }
         }
@@ -128,8 +128,11 @@ class Astar extends \JMGQ\AStar\AStar
      */
     private function areAdjacent(Node $a, Node $b): bool
     {
-        return abs($a->getX() - $b->getX()) <= 1 &&
-            abs($a->getY() - $b->getY()) <= 1;
+        $deltaX = abs($a->getX() - $b->getX());
+        $deltaY = abs($a->getY() - $b->getY());
+#echo "DeltaX $deltaX - DeltaY $deltaY\n";
+        return ($deltaX === 1 && $deltaY === 0) ||
+            ($deltaX === 0 && $deltaY === 1);
     }
 
     /**
@@ -165,26 +168,5 @@ class Astar extends \JMGQ\AStar\AStar
         $dx = abs($start->getX() - $end->getX());
         $dy = abs($start->getY() - $end->getY());
         return ($dx + $dy);
-    }
-
-    /**
-     * @param Tile $endTile
-     * @return Tile[]
-     */
-    private function getAdjacentTiles(Tile $endTile): array
-    {
-        $adjacent = [];
-
-        /** @var Tile $tile */
-        foreach ($this->tiles as &$tile) {
-            if ($tile->getPosition()->getX() === ($endTile->getPosition()->getX() - 1) ||
-                $tile->getPosition()->getX() === ($endTile->getPosition()->getX() + 1) ||
-                $tile->getPosition()->getY() === ($endTile->getPosition()->getY() - 1) ||
-                $tile->getPosition()->getY() === ($endTile->getPosition()->getY() + 1)) {
-                $adjacent[] = $tile;
-            }
-        }
-
-        return $adjacent;
     }
 }

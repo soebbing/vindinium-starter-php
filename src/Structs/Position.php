@@ -17,7 +17,7 @@ class Position implements PositionableInterface
      * @param int $x
      * @param int $y
      */
-    public function __construct($x, $y)
+    public function __construct(int $x, int $y)
     {
         $this->x = $x;
         $this->y = $y;
@@ -35,7 +35,7 @@ class Position implements PositionableInterface
     /**
      * @return int
      */
-    public function getX()
+    public function getX(): int
     {
         return $this->x;
     }
@@ -43,7 +43,7 @@ class Position implements PositionableInterface
     /**
      * @return int
      */
-    public function getY()
+    public function getY(): int
     {
         return $this->y;
     }
@@ -51,7 +51,7 @@ class Position implements PositionableInterface
     /**
      * @return Position
      */
-    public function getPosition()
+    public function getPosition(): Position
     {
         return $this;
     }
@@ -59,7 +59,7 @@ class Position implements PositionableInterface
     /**
      * @return string
      */
-    public function getID()
+    public function getID(): string
     {
         return $this->getX() . 'x' .  $this->getY();
     }
@@ -67,7 +67,7 @@ class Position implements PositionableInterface
     /**
      * @return string
      */
-    public function __toString()
+    public function __toString(): string
     {
         return "{$this->getX()}x{$this->getY()}";
     }

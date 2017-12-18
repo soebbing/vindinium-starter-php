@@ -25,6 +25,9 @@ class State
     /** @var Hero */
     private $hero;
 
+    /** @var array */
+    private $route;
+
     /**
      * @param array $json
      * @return State
@@ -93,5 +96,21 @@ class State
     public function getHero()
     {
         return $this->hero;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRoute(): ?array
+    {
+        return $this->route;
+    }
+
+    /**
+     * @param array $route
+     */
+    public function setRoute(array $route): void
+    {
+        $this->route = $route;
     }
 }

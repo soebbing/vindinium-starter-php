@@ -72,13 +72,13 @@ class Client
 
         while ($this->isFinished($state) === false) {
 
-            $formatter->renderState($state);
-
             // Move to some direction
             $url = $state->getPlayUrl();
             $direction = $botObject->move($state);
+            $formatter->renderState($state);
             $formatter->writeln('Move: ' . $direction);
             $state = $this->move($url, $direction);
+
         }
     }
 

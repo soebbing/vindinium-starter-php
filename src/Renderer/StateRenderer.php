@@ -2,6 +2,8 @@
 
 namespace Vindinium\Renderer;
 
+use Vindinium\Structs\Interpreted\Tile;
+use Vindinium\Structs\Position;
 use Vindinium\Structs\State;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
@@ -52,6 +54,7 @@ class StateRenderer
         $tiles = $state->getGame()->getBoard()->getTiles();
         for ($row = 0, $size = $state->getGame()->getBoard()->getSize(); $row < $size; $row++) {
             $rowString = '';
+
             for ($tile = 0; $tile < ($size * 2); $tile += 2) {
                 switch (true) {
                     case substr($tiles, ($row * $size * 2) + $tile, 2) === '##':
@@ -59,7 +62,11 @@ class StateRenderer
                         break;
 
                     case substr($tiles, ($row * $size * 2) + $tile, 2) === '  ':
-                        $rowString .= '<grass>  </grass>';
+                        if ($this->isInPath(new Position($row, $tile/2), $state->getRoute())) {
+                            $rowString .= '<route>o°</route>';
+                        } else {
+                            $rowString .= '<grass>  </grass>';
+                        }
                         break;
 
                     case substr($tiles, ($row * $size * 2) + $tile, 2) === '[]':
@@ -82,34 +89,66 @@ class StateRenderer
                         break;
                 }
 
+//                if ($this->isInPath(new Position($row, $tile/2), $state->getRoute())) {
+//                    $rowString = "<route>{$rowString}</route>";
+//                }
             }
-
+#echo $rowString . "\n";
             $this->output->writeln($rowString);
         }
+
         $this->output->writeln("\n\n");
+        if ($state->getRoute()) {
+            $route = $state->getRoute();
+            $tile = array_pop($route);
+            $this->output->writeln(sprintf('Ziel ist %s in %s', $tile->getType(), $tile->getPosition()));
+        }
     }
 
     public function setStyles(): void
     {
         $formatter = $this->output->getFormatter();
-        $formatter->setStyle('hero1', new OutputFormatterStyle('red', 'default'));
-        $formatter->setStyle('hero2', new OutputFormatterStyle('blue', 'default'));
-        $formatter->setStyle('hero3', new OutputFormatterStyle('green', 'default'));
-        $formatter->setStyle('hero4', new OutputFormatterStyle('yellow', 'default'));
-        $formatter->setStyle('gold', new OutputFormatterStyle('cyan', 'default'));
-        $formatter->setStyle('tavern', new OutputFormatterStyle('magenta', 'default'));
-        $formatter->setStyle('wood', new OutputFormatterStyle('black', 'default'));
-        $formatter->setStyle('grass', new OutputFormatterStyle('default', 'default'));
+        $formatter->setStyle('hero1', new OutputFormatterStyle('red'));
+        $formatter->setStyle('hero2', new OutputFormatterStyle('blue'));
+        $formatter->setStyle('hero3', new OutputFormatterStyle('green'));
+        $formatter->setStyle('hero4', new OutputFormatterStyle('yellow'));
+        $formatter->setStyle('gold', new OutputFormatterStyle('cyan'));
+        $formatter->setStyle('tavern', new OutputFormatterStyle('magenta'));
+        $formatter->setStyle('wood', new OutputFormatterStyle('black'));
+        $formatter->setStyle('grass', new OutputFormatterStyle('default'));
+        $formatter->setStyle('route', new OutputFormatterStyle(null, 'white'));
     }
 
     private function renderStats(State $state): void
     {
-        $hero = $state->getHero();
         $number = 1;
 
         foreach ($state->getGame()->getHeroes() as $otherHero) {
             $this->output->writeln("<hero{$number}>{$otherHero->getName()} - Life: {$otherHero->getLife()}, Gold: {$otherHero->getGold()}, Elo: {$otherHero->getElo()}</hero{$number}>");
             $number++;
         }
+    }
+
+    /**
+     * @param Position $position
+     * @param array $route
+     * @return bool
+     */
+    private function isInPath(Position $position, ?array $route): bool
+    {
+        if (!$route) {
+            return false;
+        }
+
+        /** @var Position $element */
+        foreach ($route as $element) {
+
+#            echo $position->getID() . ' == ' . $element->getPosition()->getID() . "\n";
+            if ($element->getPosition()->getID() === $position->getID()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
