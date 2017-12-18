@@ -40,14 +40,14 @@ class LordHelmchen implements BotInterface
      *
      * @return mixed
      */
-    public function move(State $state)
+    public function move(State $state): string
     {
         $this->astar->setState($state);
         $tiles = $this->tileParser->parse($state);
 
         $targetNode = $this->findTargetNode($state, $tiles);
 
-        $this->lastDirection = $this->getDirectionToNode($state->getHero(), $targetNode, $tiles);
+        $this->lastDirection = $this->getDirectionToNode($state->getHero(), $targetNode);
 
         return $this->lastDirection;
     }
@@ -62,29 +62,27 @@ class LordHelmchen implements BotInterface
      *
      * @return Tile
      */
-    private function findTargetNode(State $state, array $tiles)
+    private function findTargetNode(State $state, array $tiles): Tile
     {
-        $targetTiles = $this->buildLinkList($state, $tiles);
+        $targetTiles = $this->buildTargetList($state, $tiles);
 
-        $distances = [];
+        /**
+         * Contains a list of possible target tiles, the steps to that tile and the weight of the target
+         */
+        $targets = [];
 
         foreach ($targetTiles as $tile) {
-            # If a gold mine belongs to us, we don't need to go there
-            if ($tile->getType() === Tile::TREASURE &&
-                $tile->getOwner()) {
-
-                continue;
-            }
-
+            // Determine the steps to said target
             $steps = $this->astar->run($this->getTileForPosition($state->getHero()->getPosition(), $tiles), $tile);
-            $distances[] = [
+
+            $targets[] = [
                 'weight' => count($steps), # lower is better
                 'tile' => $tile,
                 'steps' => $steps,
             ];
         }
 
-        foreach ($distances as &$distance) {
+        foreach ($targets as &$distance) {
             /** @var Tile $tile */
             $tile = $distance['tile'];
 
@@ -110,27 +108,32 @@ class LordHelmchen implements BotInterface
 
             # If we have enough life, we don't want to go to a tavern
             if ($tile->getType() === Tile::TAVERN &&
-                $state->getHero()->getLife() > 20) {
+                $state->getHero()->getLife() > 25) {
                 $distance['weight'] += 100;
             }
 
-            # If we DONT have enough life, we don't want to go to a tavern
+            # If we DON'T have enough life, we don't want to go to a tavern
             if ($tile->getType() === Tile::TAVERN &&
                 $state->getHero()->getLife() < 20) {
                 $distance['weight'] -= 500;
             }
         }
+        unset($distance);
 
-        usort($distances, function($a, $b) {
-            return $a['weight'] < $b['weight'] ? 1 : -1;
+        // Sort the list by weights, asc
+        usort($targets, function($a, $b) {
+            return $a['weight'] > $b['weight'] ? 1 : -1;
         });
 
-        $target = array_pop($distances);
+        $target = array_shift($targets);
+
         /** @var Tile $tile */
         $tile =  $target['tile'];
+        echo "Gehe zu " .  $tile->getType() . " in " . $tile->getPosition() . " weil " . $target['weight'] . "\n";
 
-        #echo "Gehe zu " .  $tile->getType() . " in " . $tile->getPosition() . " weil " . $target['weight'] . "\n";
-        return $tile;
+        $steps = $target['steps'];
+        array_shift($steps); // The first element is the starting position, we remove it.
+        return array_shift($steps);
     }
 
     /**
@@ -140,7 +143,7 @@ class LordHelmchen implements BotInterface
      * @param array $tiles
      * @return Tile[]
      */
-    private function buildLinkList(State $state, array $tiles)
+    private function buildTargetList(State $state, array $tiles): array
     {
         $otherHeros = $this->getHeros($state->getHero(), $state->getGame()->getHeroes(), $tiles);
         $treasures = $this->getTreasures($state->getHero(), $tiles);
@@ -154,7 +157,7 @@ class LordHelmchen implements BotInterface
      * @param Tile[] $tiles
      * @return Tile[]
      */
-    private function getTreasures(Hero $hero, array $tiles)
+    private function getTreasures(Hero $hero, array $tiles): array
     {
         $treasures = [];
 
@@ -172,7 +175,7 @@ class LordHelmchen implements BotInterface
      * @param Tile[] $tiles
      * @return Tile[]
      */
-    private function getTaverns(array $tiles)
+    private function getTaverns(array $tiles): array
     {
         $taverns = [];
 
@@ -192,7 +195,7 @@ class LordHelmchen implements BotInterface
      *
      * @return Tile[]
      */
-    private function getHeros(Hero $lordHelmchen, array $allHeros, array $tiles)
+    private function getHeros(Hero $lordHelmchen, array $allHeros, array $tiles): array
     {
         $heros = [];
 
@@ -213,58 +216,31 @@ class LordHelmchen implements BotInterface
      *
      * @param Hero $hero
      * @param Node|Tile $targetNode
-     * @param Tile[] $tiles
      *
      * @throws \OutOfBoundsException
      *
      * @return string
      */
-    private function getDirectionToNode(Hero $hero, Tile $targetNode, array $tiles)
+    private function getDirectionToNode(Hero $hero, Tile $targetNode): string
     {
         $currentNode = $hero->getPosition();
-        $direction = Board::Stay;
-
-        $northTile = null;
-        $southTile = null;
-        $westTile = null;
-        $eastTile = null;
-
         if ($currentNode->getX() > $targetNode->getX()) {
-            $northTile = $this->getTileForPosition(new Position($currentNode->getX() - 1, $currentNode->getY()), $tiles);
-            if ($northTile->isWalkable($hero)) {
-                $direction = Board::North;
-            }
+            return Board::North;
         }
 
         if ($currentNode->getX() < $targetNode->getX()) {
-            $southTile = $this->getTileForPosition(new Position($currentNode->getX() + 1, $currentNode->getY()), $tiles);
-
-            if ($southTile->isWalkable($hero)) {
-                $direction = Board::South;
-            }
+            return Board::South;
         }
 
         if ($currentNode->getY() > $targetNode->getY()) {
-            $westTile = $this->getTileForPosition(new Position($currentNode->getX(), $currentNode->getY() - 1), $tiles);
-
-            if ($westTile->isWalkable($hero)) {
-                $direction = Board::West;
-            }
+            return  Board::West;
         }
 
         if ($currentNode->getY() < $targetNode->getY()) {
-            $eastTile = $this->getTileForPosition(new Position($currentNode->getX(), $currentNode->getY() + 1), $tiles);
-
-            if ($eastTile->isWalkable($hero)) {
-                $direction = Board::East;
-            }
+            return Board::East;
         }
 
-        if ($direction === Board::Stay) {
-            $direction = $this->getFallbackDirection($currentNode, $hero, $tiles);
-        }
-
-        return $direction;
+        return Board::Stay;
     }
 
     /**
@@ -286,59 +262,5 @@ class LordHelmchen implements BotInterface
         }
 
         throw new \OutOfBoundsException('Tile for Position ' . $position->getID() . ' not found');
-    }
-
-    /**
-     * @param Position $currentPosition
-     * @param Hero $hero
-     * @param Tile[] $tiles
-     *
-     * @return string
-     */
-    private function getFallbackDirection(Position $currentPosition, Hero $hero, array $tiles)
-    {
-        $direction = Board::Stay;
-
-        /** @var Tile $tile */
-        foreach ($tiles as $tile) {
-            // South
-            if ($tile->getPosition()->getX() === ($currentPosition->getX() - 1) &&
-                $tile->isWalkable($hero) && in_array(
-                    $this->lastDirection,
-                    [Board::East, Board::West],
-                    true
-                )) {
-                $direction = Board::South;
-            }
-            // North
-            if ($tile->getPosition()->getX() === ($currentPosition->getX() + 1) &&
-                $tile->isWalkable($hero) && in_array(
-                    $this->lastDirection,
-                    [Board::West, Board::East],
-                    true
-                )) {
-                $direction = Board::North;
-            }
-            // West
-            if ($tile->getPosition()->getY() === ($currentPosition->getY() - 1) &&
-                $tile->isWalkable($hero) && in_array(
-                    $this->lastDirection,
-                    [Board::North, Board::South],
-                    true
-                )) {
-                $direction = Board::West;
-            }
-            // East
-            if ($tile->getPosition()->getY() === ($currentPosition->getY() + 1) &&
-                $tile->isWalkable($hero) && in_array(
-                    $this->lastDirection,
-                    [Board::South, Board::North],
-                    true
-                )) {
-                $direction = Board::East;
-            }
-        }
-
-        return $direction;
     }
 }

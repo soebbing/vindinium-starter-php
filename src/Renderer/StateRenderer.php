@@ -37,7 +37,8 @@ class StateRenderer
     {
         $this->setStyles();
 
-        $this->output->writeln("\033\143Round {$state->getGame()->getTurn()}/{$state->getGame()->getMaxTurns()}\n");
+        $this->output->writeln("\033\143Web: {$state->getViewUrl()}\n");
+        $this->output->writeln("Round {$state->getGame()->getTurn()}/{$state->getGame()->getMaxTurns()}\n");
 
         $this->renderBoard($state);
         $this->renderStats($state);
@@ -46,7 +47,7 @@ class StateRenderer
     /**
      * @param State $state
      */
-    private function renderBoard(State $state)
+    private function renderBoard(State $state): void
     {
         $tiles = $state->getGame()->getBoard()->getTiles();
         for ($row = 0, $size = $state->getGame()->getBoard()->getSize(); $row < $size; $row++) {
@@ -88,7 +89,7 @@ class StateRenderer
         $this->output->writeln("\n\n");
     }
 
-    public function setStyles()
+    public function setStyles(): void
     {
         $formatter = $this->output->getFormatter();
         $formatter->setStyle('hero1', new OutputFormatterStyle('red', 'default'));
@@ -101,10 +102,9 @@ class StateRenderer
         $formatter->setStyle('grass', new OutputFormatterStyle('default', 'default'));
     }
 
-    private function renderStats(State $state)
+    private function renderStats(State $state): void
     {
         $hero = $state->getHero();
-        $heros = [$hero];
         $number = 1;
 
         foreach ($state->getGame()->getHeroes() as $otherHero) {

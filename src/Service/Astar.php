@@ -4,6 +4,7 @@ namespace Vindinium\Service;
 
 use JMGQ\AStar\Node;
 use Vindinium\Parser\TileParser;
+use Vindinium\Structs\Interpreted\Tile\Treasure;
 use Vindinium\Structs\State;
 use Vindinium\Structs\Position;
 use Vindinium\Structs\Interpreted\Tile;
@@ -32,7 +33,7 @@ class Astar extends \JMGQ\AStar\AStar
     /**
      * @param State $state
      */
-    public function setState(State $state)
+    public function setState(State $state): void
     {
         $this->state = $state;
 
@@ -46,7 +47,7 @@ class Astar extends \JMGQ\AStar\AStar
      *
      * @return Node[]
      */
-    public function generateAdjacentNodes(Node $node)
+    public function generateAdjacentNodes(Node $node): array
     {
         $adjacent = [];
 
@@ -64,13 +65,13 @@ class Astar extends \JMGQ\AStar\AStar
     /**
      * @param Node $node
      * @param Node $adjacent
-     * @return integer | float
+     * @return float
      */
-    public function calculateRealCost(Node $node, Node $adjacent)
+    public function calculateRealCost(Node $node, Node $adjacent): float
     {
         switch (get_class($adjacent)) {
             case Grass::class:
-                return 1;
+                return 1.;
                 break;
 
             case Spawn::class:
@@ -78,7 +79,7 @@ class Astar extends \JMGQ\AStar\AStar
                 break;
 
             default:
-                return PHP_INT_MAX;
+                return (float) PHP_INT_MAX;
         }
     }
 
@@ -88,9 +89,9 @@ class Astar extends \JMGQ\AStar\AStar
      *
      * @throws \OutOfBoundsException
      *
-     * @return integer | float
+     * @return float
      */
-    public function calculateEstimatedCost(Node $start, Node $end)
+    public function calculateEstimatedCost(Node $start, Node $end): float
     {
         $utility = $this->manhattanDistance($start, $end);
         $endTile = $this->findTileForNode($end, $this->tiles);
@@ -104,10 +105,9 @@ class Astar extends \JMGQ\AStar\AStar
         }
 
         if (($endTile->getType() === Tile::WOOD) ||
-            ($endTile->getType() === Tile::TREASURE &&
-            $endTile->getOwner() &&
-                $endTile->getOwner() === $this->state->getHero())) {
-            return 100 * $utility;
+            ($endTile->getType() === Tile::TAVERN && $this->state->getHero()->getLife() > 30) ||
+            ($endTile->getType() === Tile::TREASURE && $endTile->getOwner() && $endTile->getOwner() === $this->state->getHero())) {
+            return $utility * 100;
         }
 
         if ($endTile->getType() === Tile::HERO && $endTile->getHero() !== $this->state->getHero()) {
@@ -118,15 +118,6 @@ class Astar extends \JMGQ\AStar\AStar
             }
         }
 
-        $adjTiles = $this->getAdjacentTiles($endTile);
-        foreach ($adjTiles as &$tile) {
-            if ($tile->getType() === Tile::TAVERN) {
-                $utility -= 1 / ($utility + 1);
-                break;
-            }
-        }
-
-
         return $utility;
     }
 
@@ -135,7 +126,7 @@ class Astar extends \JMGQ\AStar\AStar
      * @param Node|Position $b
      * @return bool
      */
-    private function areAdjacent(Node $a, Node $b)
+    private function areAdjacent(Node $a, Node $b): bool
     {
         return abs($a->getX() - $b->getX()) <= 1 &&
             abs($a->getY() - $b->getY()) <= 1;
@@ -149,9 +140,9 @@ class Astar extends \JMGQ\AStar\AStar
      *
      * @return Tile
      */
-    private function findTileForNode(Node $node, array $tiles)
+    private function findTileForNode(Node $node, array $tiles): Tile
     {
-        list($x, $y) = explode('x', $node->getID());
+        [$x, $y] = explode('x', $node->getID());
 
         /** @var Tile $tile */
         foreach ($tiles as $tile) {
@@ -167,9 +158,9 @@ class Astar extends \JMGQ\AStar\AStar
     /**
      * @param Node $start
      * @param Node $end
-     * @return number
+     * @return float
      */
-    private function manhattanDistance(Node $start, Node $end)
+    private function manhattanDistance(Node $start, Node $end): float
     {
         $dx = abs($start->getX() - $end->getX());
         $dy = abs($start->getY() - $end->getY());
@@ -180,7 +171,7 @@ class Astar extends \JMGQ\AStar\AStar
      * @param Tile $endTile
      * @return Tile[]
      */
-    private function getAdjacentTiles(Tile $endTile)
+    private function getAdjacentTiles(Tile $endTile): array
     {
         $adjacent = [];
 

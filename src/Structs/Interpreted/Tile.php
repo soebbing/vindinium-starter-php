@@ -4,7 +4,6 @@ namespace Vindinium\Structs\Interpreted;
 
 use JMGQ\AStar\AbstractNode;
 use Vindinium\Structs\Distance;
-use Vindinium\Structs\Hero;
 use Vindinium\Structs\Position;
 use Vindinium\PositionableInterface;
 
@@ -35,11 +34,9 @@ abstract class Tile extends AbstractNode implements PositionableInterface
      * @param PositionableInterface $positionable
      * @return Distance
      */
-    public function getDistance(PositionableInterface $positionable)
+    public function getDistance(PositionableInterface $positionable): Distance
     {
         $sourcePos = $positionable->getPosition();
-        $xDistance = 0;
-        $YDistance = 0;
 
         if ($this->position->getX() > $sourcePos->getX()) {
             $xDistance = $this->position->getX() - $sourcePos->getX();
@@ -65,24 +62,28 @@ abstract class Tile extends AbstractNode implements PositionableInterface
     /**
      * @return Position
      */
-    public function getPosition()
+    public function getPosition(): Position
     {
         return $this->position;
     }
 
     /**
-     * @param Hero|null $hero
+     * @param bool|null $isWalkableOverride
      * @return bool
      */
-    public function isWalkable(Hero $hero = null)
+    public function isWalkable($isWalkableOverride = null): bool
     {
-        return $this->walkable;
+        if ($isWalkableOverride === null) {
+            return $this->walkable;
+        }
+
+        return $isWalkableOverride;
     }
 
     /**
      * @return string
      */
-    public function getType()
+    public function getType(): string
     {
         $elements = explode('\\', get_class($this));
         return array_pop($elements);
@@ -92,7 +93,7 @@ abstract class Tile extends AbstractNode implements PositionableInterface
      * Obtains the node's unique ID
      * @return string
      */
-    public function getID()
+    public function getID(): string
     {
         return $this->position->getID();
     }
@@ -110,7 +111,7 @@ abstract class Tile extends AbstractNode implements PositionableInterface
     /**
      * @return string
      */
-    public function __toString()
+    public function __toString(): string
     {
         return "{$this->getType()} ({$this->getPosition()})";
     }

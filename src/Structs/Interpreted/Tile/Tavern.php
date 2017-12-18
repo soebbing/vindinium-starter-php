@@ -12,7 +12,7 @@ class Tavern extends Tile
      */
     public function __construct(Position $position)
     {
-        $this->walkable = true;
+        $this->walkable = false;
         parent::__construct($position);
     }
 }
