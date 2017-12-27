@@ -8,7 +8,7 @@ ini_set('display_errors', 1);
 $input = new \Symfony\Component\Console\Input\ArgvInput();
 $output = new \Symfony\Component\Console\Output\ConsoleOutput();
 
-$astar = new \Vindinium\Service\Astar(new \Vindinium\Parser\TileParser());
+$astar = new \Vindinium\Service\Astar();
 
 $app = new Pimple\Container([
     'astar' => $astar,
@@ -19,6 +19,6 @@ $app = new Pimple\Container([
 $console = new Symfony\Component\Console\Application();
 $console->addCommands([
     new \Vindinium\Commands\Train('train', $app),
-    new \Vindinium\Commands\Fight('fight', $app)
+    new \Vindinium\Commands\Arena('arena', $app)
 ]);
 $console->run($input, $output);

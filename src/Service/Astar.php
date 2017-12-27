@@ -4,6 +4,7 @@ namespace Vindinium\Service;
 
 use JMGQ\AStar\Node;
 use Vindinium\Parser\TileParser;
+use Vindinium\Structs\Hero;
 use Vindinium\Structs\State;
 use Vindinium\Structs\Position;
 use Vindinium\Structs\Interpreted\Tile;
@@ -15,28 +16,28 @@ class Astar extends \JMGQ\AStar\AStar
     /** @var State */
     private $state;
 
-    /** @var TileParser */
-    private $tileParser;
-
     /** @var Tile[] */
     private $tiles;
 
     /**
-     * @param TileParser $tileParser
+     * @var array
      */
-    public function __construct(TileParser $tileParser)
-    {
-        $this->tileParser = $tileParser;
-    }
+    private $cache;
+
 
     /**
      * @param State $state
+     * @param $tiles
      */
-    public function setState(State $state): void
+    public function setState(State $state, $tiles): void
     {
         $this->state = $state;
+        $this->tiles = $tiles;
 
-        $this->tiles = $this->tileParser->parse($state);
+        $this->cache = [];
+        foreach ($this->tiles as $tile) {
+            $this->cache[$tile->getID()] = $tile;
+        }
     }
 
     /**
@@ -54,8 +55,11 @@ class Astar extends \JMGQ\AStar\AStar
 
         foreach ($this->tiles as $tile) {
             if ($this->areAdjacent($nodeTile, $tile)) {
-                #echo $nodeTile->getID() . ' && ' . $tile->getID() . " are adajecent\n";
                 $adjacent[] = $tile;
+
+                if (\count($adjacent) === 4) {
+                    break;
+                }
             }
         }
 
@@ -72,6 +76,10 @@ class Astar extends \JMGQ\AStar\AStar
         switch (get_class($adjacent)) {
             case Grass::class:
                 return 1.;
+                break;
+
+            case Hero::class:
+                return 1.5;
                 break;
 
             case Spawn::class:
@@ -100,7 +108,7 @@ class Astar extends \JMGQ\AStar\AStar
             return $utility * 100;
         }
 
-        if ($utility === 0) {
+        if (round($utility) === 0.) {
             $utility = 0.1;
         }
 
@@ -130,7 +138,7 @@ class Astar extends \JMGQ\AStar\AStar
     {
         $deltaX = abs($a->getX() - $b->getX());
         $deltaY = abs($a->getY() - $b->getY());
-#echo "DeltaX $deltaX - DeltaY $deltaY\n";
+
         return ($deltaX === 1 && $deltaY === 0) ||
             ($deltaX === 0 && $deltaY === 1);
     }
@@ -145,17 +153,11 @@ class Astar extends \JMGQ\AStar\AStar
      */
     private function findTileForNode(Node $node, array $tiles): Tile
     {
-        [$x, $y] = explode('x', $node->getID());
-
-        /** @var Tile $tile */
-        foreach ($tiles as $tile) {
-            if ($tile->getPosition()->getX() === (int) $x &&
-                $tile->getPosition()->getY() === (int) $y) {
-                return $tile;
-            }
+        if (!array_key_exists($node->getID(), $this->cache)) {
+            throw new \OutOfBoundsException('No tile for node "' . $node->getID() . '" found.');
         }
 
-        throw new \OutOfBoundsException('No tile for node "' . $node->getID() . '" found.');
+        return $this->cache[$node->getID()];
     }
 
     /**

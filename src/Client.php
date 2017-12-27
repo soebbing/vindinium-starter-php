@@ -11,7 +11,7 @@ use Vindinium\Renderer\StateRenderer;
 
 class Client
 {
-    CONST TIMEOUT = 15;
+    private CONST TIMEOUT = 15;
 
     /** @var string */
     private $key;
@@ -35,7 +35,7 @@ class Client
      * @param int $numberOfTurns
      * @param string $serverUrl
      */
-    public function __construct($key, $mode, $numberOfGames, $numberOfTurns, $serverUrl)
+    public function __construct(string $key, string $mode, int $numberOfGames, int $numberOfTurns, string $serverUrl)
     {
         $this->key = $key;
         $this->mode = $mode;
@@ -71,18 +71,16 @@ class Client
         $state = $this->getNewGameState();
 
         while ($this->isFinished($state) === false) {
-
             // Move to some direction
             $url = $state->getPlayUrl();
             $direction = $botObject->move($state);
             $formatter->renderState($state);
             $formatter->writeln('Move: ' . $direction);
             $state = $this->move($url, $direction);
-
         }
     }
 
-    private function getNewGameState()
+    private function getNewGameState(): ?State
     {
         $params = array('key' => $this->key);
         $api_endpoint = '/api/arena';
@@ -101,8 +99,9 @@ class Client
             return State::fromJson(json_decode($r['content'], true));
         }
 
-        echo 'Error when creating the game'. PHP_EOL;
-        echo $r['content'];
+        echo 'Error when creating the game' . PHP_EOL;
+        echo 'Message: ' . $r['content'] . PHP_EOL;
+        return null;
     }
 
     /**
@@ -110,7 +109,7 @@ class Client
      * @param string $direction
      * @return State|null
      */
-    private function move($url, $direction)
+    private function move(string $url, string $direction): ?State
     {
         /*
          * Send a move to the server
@@ -122,20 +121,21 @@ class Client
                 return State::fromJson(json_decode($r['content'], true));
             }
 
-            echo 'Error HTTP '. $r['headers']['status_code'] . "\n" . $r['content'] . "\n";
+            echo 'Error HTTP '. $r['headers']['status_code'] . PHP_EOL . $r['content'] . PHP_EOL;
             return null;
         } catch (\Exception $e) {
             echo $e->getMessage() . PHP_EOL;
-            return null;
         }
+
+        return null;
     }
 
     /**
      * @param State $state
      * @return bool
      */
-    private function isFinished(?State $state)
+    private function isFinished(?State $state): bool
     {
-        return $state && $state->getGame()->isFinished();
+        return $state === null || $state->getGame()->isFinished();
     }
 }

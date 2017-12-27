@@ -2,7 +2,6 @@
 
 namespace Vindinium\Bot;
 
-use JMGQ\AStar\Node;
 use Vindinium\BotInterface;
 use Vindinium\Parser\TileParser;
 use Vindinium\Service\Astar;
@@ -26,13 +25,8 @@ class LordHelmchen implements BotInterface
     /** @var array */
     private $route;
 
-    /**
-     * @return array
-     */
-    public function getRoute(): array
-    {
-        return $this->route;
-    }
+    /** @var array */
+    private $cache;
 
     /**
      * @param Astar $astar
@@ -53,8 +47,13 @@ class LordHelmchen implements BotInterface
      */
     public function move(State $state): string
     {
-        $this->astar->setState($state);
         $tiles = $this->tileParser->parse($state);
+        $this->astar->setState($state, $tiles);
+
+        $this->cache = [];
+        foreach ($tiles as $tile) {
+            $this->cache[$tile->getID()] = $tile;
+        }
 
         $this->route = $this->findRoute($state, $tiles);
 
@@ -85,57 +84,31 @@ class LordHelmchen implements BotInterface
 
         foreach ($targetTiles as $tile) {
             // Determine the steps to said target
-            $steps = $this->astar->run($this->getTileForPosition($state->getHero()->getPosition(), $tiles), $tile);
-
+            $steps = $this->astar->run($this->getTileForPosition($state->getHero()->getPosition()), $tile);
             $targets[] = [
-                'weight' => count($steps), # lower is better
+                'weight' => 0, # lower is better
                 'tile' => $tile,
                 'steps' => $steps,
             ];
         }
 
-        foreach ($targets as &$distance) {
-            /** @var Tile $tile */
-            $tile = $distance['tile'];
-
-            # If another Hero is stronger than us, we don't want to meet him
-            if ($tile->getType() === Tile::HERO &&
-                $state->getHero()->getLife() <
-                $tile->getHero()->getLife()) {
-                $distance['weight'] += 1000;
-            }
-
-            # If a gold mine belongs to us, we don't need to go there
-            if ($tile->getType() === Tile::TREASURE &&
-                ($tile->getOwner() && $state->getHero()->getName() === $tile->getOwner()->getName())) {
-                $distance['weight'] += 1000;
-            }
-
-            # If a gold mine does NOT belong to us, we want to go there
-            if ($tile->getType() === Tile::TREASURE &&
-                (!$tile->getOwner() ||
-                $state->getHero()->getName() !== $tile->getOwner()->getName())) {
-                $distance['weight'] -= 50;
-            }
-
-            # If we have enough life, we don't want to go to a tavern
-            if ($tile->getType() === Tile::TAVERN &&
-                $state->getHero()->getLife() > 25) {
-                $distance['weight'] += 100;
-            }
-
-            # If we DON'T have enough life, we don't want to go to a tavern
-            if ($tile->getType() === Tile::TAVERN &&
-                $state->getHero()->getLife() < 20) {
-                $distance['weight'] -= 500;
-            }
+        foreach ($targets as &$target) {
+            $target['weight'] = $this->weightTile($target['tile'], $target['steps'], $state);
         }
-        unset($distance);
+        unset($target);
 
         // Sort the list by weights, asc
         usort($targets, function($a, $b) {
             return $a['weight'] > $b['weight'] ? 1 : -1;
         });
+
+        $targetString = array_map(function ($target) {
+            return $target['weight'] . ' Gewicht, ' .
+                count($target['steps']) . ' Schritte zu ' .
+                $target['tile']->getType();
+        }, $targets);
+
+        echo implode(PHP_EOL, $targetString);
 
         $target = array_shift($targets);
 
@@ -148,15 +121,17 @@ class LordHelmchen implements BotInterface
      *
      * @param State $state
      * @param array $tiles
+     *
+     * @throws \OutOfBoundsException
+     *
      * @return Tile[]
      */
     private function buildTargetList(State $state, array $tiles): array
     {
-        $otherHeros = $this->getHeros($state->getHero(), $state->getGame()->getHeroes(), $tiles);
-        $treasures = $this->getTreasures($state->getHero(), $tiles);
-        $taverns = $this->getTaverns($tiles);
+        $otherHeros = $this->getHeros($state->getHero(), $state->getGame()->getHeroes());
+        $targets = $this->getTavernsAndTreasures($state->getHero(), $tiles);
 
-        return array_merge($otherHeros, $treasures, $taverns);
+        return array_merge($targets, $otherHeros);
     }
 
     /**
@@ -164,55 +139,40 @@ class LordHelmchen implements BotInterface
      * @param Tile[] $tiles
      * @return Tile[]
      */
-    private function getTreasures(Hero $hero, array $tiles): array
+    private function getTavernsAndTreasures(Hero $hero, array $tiles): array
     {
-        $treasures = [];
+        $targets = [];
 
         foreach ($tiles as $tile) {
-            if ($tile->getType() === Tile::TREASURE &&
-                (!$tile->getOwner() || ($tile->getOwner()->getName() !== $hero->getName()))) {
-                $treasures[] = $tile;
+            if ($tile->getType() === Tile::TAVERN ||
+                ($tile->getType() === Tile::TREASURE &&
+                (!$tile->getOwner() || ($tile->getOwner()->getPosition() !== $hero->getPosition())))) {
+                $targets[] = $tile;
             }
         }
 
-        return $treasures;
-    }
-
-    /**
-     * @param Tile[] $tiles
-     * @return Tile[]
-     */
-    private function getTaverns(array $tiles): array
-    {
-        $taverns = [];
-
-        foreach ($tiles as $tile) {
-            if ($tile->getType() === Tile::TAVERN) {
-                $taverns[] = $tile;
-            }
-        }
-
-        return $taverns;
+        return $targets;
     }
 
     /**
      * @param Hero $lordHelmchen
-     * @param Hero[] $allHeros
-     * @param Tile[] $tiles
+     * @param Hero[] $heroes
+     *
+     * @throws \OutOfBoundsException
      *
      * @return Tile[]
      */
-    private function getHeros(Hero $lordHelmchen, array $allHeros, array $tiles): array
+    private function getHeros(Hero $lordHelmchen, array $heroes): array
     {
         $heros = [];
 
-        foreach ($tiles as $tile) {
-            /** @var Hero $hero */
-            foreach ($allHeros as $hero) {
-                if ($hero->getName() !== $lordHelmchen->getName() && $hero->getPosition()->getID() === $tile->getPosition()->getID()) {
-                    $heros[] = $tile;
-                }
+        /** @var Hero $hero */
+        foreach ($heroes as $hero) {
+            if ((string) $hero->getPosition() === (string) $lordHelmchen->getPosition()) {
+                continue;
             }
+
+            $heros[] = $this->getTileForPosition($hero->getPosition());
         }
 
         return $heros;
@@ -240,7 +200,7 @@ class LordHelmchen implements BotInterface
         }
 
         if ($currentNode->getY() > $targetNode->getY()) {
-            return  Board::West;
+            return Board::West;
         }
 
         if ($currentNode->getY() < $targetNode->getY()) {
@@ -254,20 +214,95 @@ class LordHelmchen implements BotInterface
      * Return the Tile object for a given Position
      *
      * @param Position $position
-     * @param Tile[] $tiles
      *
      * @throws \OutOfBoundsException
      *
      * @return Tile
      */
-    private function getTileForPosition(Position $position, array $tiles)
+    private function getTileForPosition(Position $position): Tile
     {
-        foreach ($tiles as $tile) {
-            if ($tile->getPosition()->getID() === $position->getID()) {
-                return $tile;
-            }
+        if (!array_key_exists($position->getID(), $this->cache)) {
+            throw new \OutOfBoundsException('No tile for node "' . $position->getID() . '" found.');
         }
 
-        throw new \OutOfBoundsException('Tile for Position ' . $position->getID() . ' not found');
+        return $this->cache[$position->getID()];
+    }
+
+    /**
+     * @return array
+     */
+    public function getRoute(): array
+    {
+        return $this->route;
+    }
+
+    private function weightTile(Tile $tile, array $steps, State $state): float
+    {
+        switch ($tile->getType()) {
+            case Tile::HERO:
+                return $this->weightHero($tile, $steps, $state);
+
+            case Tile::TAVERN:
+                return $this->weightTavern($tile, $steps, $state);
+
+            case Tile::TREASURE:
+                return $this->weightTreasure($tile, $steps, $state);
+        }
+
+        return \count($steps);
+    }
+
+    private function weightTavern(Tile\Tavern $tile, array $steps, State $state)
+    {
+        $weight = \count($steps);
+/*
+        # If we have enough life, we don't want to go to a tavern
+        if ($state->getHero()->getLife() > 25) {
+            return $weight + 50;
+        }
+
+        # If we DON'T have enough life, we don't want to go to a tavern
+        if ($state->getHero()->getLife() < 20) {
+            return $weight - 500;
+        }*/
+
+        return $weight;
+    }
+
+    private function weightHero(Tile\Hero $tile, array $steps, State $state)
+    {
+        $weight = \count($steps);
+
+        # If another Hero is stronger than us, we don't want to meet him
+        if ($state->getHero()->getLife() <
+            $tile->getHero()->getLife()) {
+            return $weight + 1000;
+        }
+
+        # If another Hero is weaker than us, we WANT to meet him
+        if ($state->getHero()->getLife() - $tile->getHero()->getLife() > ($weight + 5)) {
+            return $weight - 60;
+        }
+
+        return $weight;
+    }
+
+    private function weightTreasure(Tile\Treasure $tile, array $steps, State $state): float
+    {
+        $weight = \count($steps);
+
+        # If a gold mine belongs to us, we don't need to go there
+        if ($tile->getOwner() && (string) $state->getHero()->getPosition() === (string) $tile->getOwner()->getPosition()) {
+            return $weight + 1000;
+        }
+
+        # If a gold mine does NOT belong to us, we want to go there
+        if (($state->getHero()->getLife() > \count($steps) + 22) &&
+            (!$tile->getOwner() ||
+                (string) $state->getHero()->getPosition() !== (string) $tile->getOwner()->getPosition())) {
+            return $weight - 60;
+        }
+
+        return $weight;
     }
 }

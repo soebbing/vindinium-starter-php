@@ -17,7 +17,7 @@ class Hero extends Tile
      */
     public function __construct(Position $position, HeroStruct $hero)
     {
-        $this->walkable = false;
+        $this->walkable = true;
         $this->hero = $hero;
 
         parent::__construct($position);
@@ -26,7 +26,7 @@ class Hero extends Tile
     /**
      * @return \Vindinium\Structs\Hero
      */
-    public function getHero()
+    public function getHero(): HeroStruct
     {
         return $this->hero;
     }

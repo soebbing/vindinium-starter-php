@@ -88,12 +88,8 @@ class StateRenderer
                         $rowString .= "<hero{$number}>@$number</hero{$number}>";
                         break;
                 }
-
-//                if ($this->isInPath(new Position($row, $tile/2), $state->getRoute())) {
-//                    $rowString = "<route>{$rowString}</route>";
-//                }
             }
-#echo $rowString . "\n";
+
             $this->output->writeln($rowString);
         }
 

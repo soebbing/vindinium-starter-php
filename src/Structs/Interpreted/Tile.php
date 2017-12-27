@@ -98,12 +98,12 @@ abstract class Tile extends AbstractNode implements PositionableInterface
         return $this->position->getID();
     }
 
-    public function getX()
+    public function getX(): int
     {
         return $this->position->getX();
     }
 
-    public function getY()
+    public function getY(): int
     {
         return $this->position->getY();
     }
